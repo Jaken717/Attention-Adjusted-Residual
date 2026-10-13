@@ -22,6 +22,7 @@ def default_hparams():
         n_embd=768,
         n_head=12,
         n_layer=12,
+        attn_residual=True,  # x = sum_h A_h (x + attn_out_h) instead of x = x + attn_out
     )
 
 def shape_list(x):
@@ -138,7 +139,13 @@ def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
         a, present, w, logits = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)  # norm: [B, T, D]; a: [B, T, D]; w, logits: [B, H, T, S]
-        x = x + a  # [B, T, D]
+        if hparams.attn_residual:
+            # Attention-adjusted residual: the skip path is mixed across positions by the
+            # summed attention weights. Needs x at every source position, so no k/v cache.
+            assert past is None, 'attn_residual needs the full sequence; call model() without past'
+            x = tf.matmul(tf.reduce_sum(w, axis=1), x) + a  # [B, T, T] @ [B, T, D] -> [B, T, D]
+        else:
+            x = x + a  # [B, T, D]
         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)  # norm: [B, T, D]; m: [B, T, D]
         x = x + m  # [B, T, D]
         return x, present, w, logits
