@@ -1,11 +1,19 @@
 import numpy as np
-import tensorflow as tf
-from tensorflow.contrib.training import HParams
+import tensorflow.compat.v1 as tf
 
 # Shape notation used in the comments below:
 #   B = batch, T = sequence length of the current input (dst), P = cached past length,
 #   S = P + T = source length (S = T when there is no past), H = n_head, D = n_embd, V = n_vocab.
 #   For the 124M model: H = 12, D = 768, D/H = 64, 4D = 3072, V = 50257.
+
+class HParams(dict):
+    def __getattr__(self, name):
+        return self[name]
+    def __setattr__(self, name, value):
+        self[name] = value
+    def override_from_dict(self, d):
+        self.update(d)
+        return self
 
 def default_hparams():
     return HParams(
@@ -14,6 +22,7 @@ def default_hparams():
         n_embd=768,
         n_head=12,
         n_layer=12,
+        attn_residual=True,  # x = sum_h A_h (x + attn_out_h) instead of x = x + attn_out
     )
 
 def shape_list(x):
@@ -99,9 +108,10 @@ def attn(x, scope, n_state, *, past, hparams):
         w = w * tf.rsqrt(tf.cast(v.shape[-1].value, w.dtype))  # [B, H, T, S]
 
         w = mask_attn_weights(w)  # [B, H, T, S]
+        logits = w                # pre-softmax attention scores (scaled, masked); [B, H, T, S]
         w = softmax(w)             # post-softmax attention weights (what the model actually uses); [B, H, T, S]
         a = tf.matmul(w, v)  # [B, H, T, S] @ [B, H, S, D/H] -> [B, H, T, D/H]
-        return a
+        return a, w, logits
 
     with tf.variable_scope(scope):
         c = conv1d(x, 'c_attn', n_state*3)  # [B, T, D] -> [B, T, 3D]
@@ -111,10 +121,10 @@ def attn(x, scope, n_state, *, past, hparams):
             pk, pv = tf.unstack(past, axis=1)  # each [B, H, P, D/H]
             k = tf.concat([pk, k], axis=-2)  # [B, H, S, D/H]
             v = tf.concat([pv, v], axis=-2)  # [B, H, S, D/H]
-        a = multihead_attn(q, k, v)
+        a, w, logits = multihead_attn(q, k, v)  # a: [B, H, T, D/H]; w, logits: [B, H, T, S]
         a = merge_heads(a)  # [B, T, D]
         a = conv1d(a, 'c_proj', n_state)  # [B, T, D]
-        return a, present
+        return a, present, w, logits
 
 
 def mlp(x, scope, n_state, *, hparams):
@@ -128,11 +138,17 @@ def mlp(x, scope, n_state, *, hparams):
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
-        x = x + a
+        a, present, w, logits = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)  # norm: [B, T, D]; a: [B, T, D]; w, logits: [B, H, T, S]
+        if hparams.attn_residual:
+            # Attention-adjusted residual: the skip path is mixed across positions by the
+            # summed attention weights. Needs x at every source position, so no k/v cache.
+            assert past is None, 'attn_residual needs the full sequence; call model() without past'
+            x = tf.matmul(tf.reduce_sum(w, axis=1), x) + a  # [B, T, T] @ [B, T, D] -> [B, T, D]
+        else:
+            x = x + a  # [B, T, D]
         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)  # norm: [B, T, D]; m: [B, T, D]
         x = x + m  # [B, T, D]
-        return x, present
+        return x, present, w, logits
 
 def past_shape(*, hparams, batch_size=None, sequence=None):
     return [batch_size, hparams.n_layer, 2, hparams.n_head, sequence, hparams.n_embd // hparams.n_head]
@@ -163,12 +179,18 @@ def model(hparams, X, past=None, scope='model', reuse=False):
 
         # Transformer
         presents = []
+        attentions = []
+        attention_logits = []
         pasts = tf.unstack(past, axis=1) if past is not None else [None] * hparams.n_layer
         assert len(pasts) == hparams.n_layer
         for layer, past in enumerate(pasts):
-            h, present = block(h, 'h%d' % layer, past=past, hparams=hparams)
+            h, present, w, attn_logits = block(h, 'h%d' % layer, past=past, hparams=hparams)  # h: [B, T, D]; present: [B, 2, H, T, D/H]; w, attn_logits: [B, H, T, S]
             presents.append(present)
+            attentions.append(w)
+            attention_logits.append(attn_logits)
         results['present'] = tf.stack(presents, axis=1)  # [B, n_layer, 2, H, T, D/H]
+        results['attentions'] = attentions  # list of n_layer tensors, each [batch, n_head, dst_seq, src_seq] (post-softmax weights)
+        results['attention_logits'] = attention_logits  # same shape, pre-softmax scaled+masked scores
         h = norm(h, 'ln_f')  # [B, T, D]
 
         # Language model loss.  Do tokens <n predict token n?
