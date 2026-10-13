@@ -1,0 +1,47 @@
+--- a/src/model.py
++++ b/src/model.py
+@@ -22,6 +22,7 @@
+         n_embd=768,
+         n_head=12,
+         n_layer=12,
++        attn_residual=True,  # x = sum_h A_h (x + attn_out_h) instead of x = x + attn_out
+     )
+ 
+ def shape_list(x):
+@@ -138,7 +139,13 @@
+     with tf.variable_scope(scope):
+         nx = x.shape[-1].value
+         a, present, w, logits = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)  # norm: [B, T, D]; a: [B, T, D]; w, logits: [B, H, T, S]
+-        x = x + a  # [B, T, D]
++        if hparams.attn_residual:
++            # Attention-adjusted residual: the skip path is mixed across positions by the
++            # summed attention weights. Needs x at every source position, so no k/v cache.
++            assert past is None, 'attn_residual needs the full sequence; call model() without past'
++            x = tf.matmul(tf.reduce_sum(w, axis=1), x) + a  # [B, T, T] @ [B, T, D] -> [B, T, D]
++        else:
++            x = x + a  # [B, T, D]
+         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)  # norm: [B, T, D]; m: [B, T, D]
+         x = x + m  # [B, T, D]
+         return x, present, w, logits
+--- a/src/sample.py
++++ b/src/sample.py
+@@ -60,13 +60,17 @@
+ 
+     with tf.name_scope('sample_sequence'):
+         def body(past, prev, output):
+-            next_outputs = step(hparams, prev, past=past)
++            if hparams.attn_residual:
++                # No k/v cache with the attention-adjusted residual: rerun the whole sequence.
++                next_outputs = step(hparams, output)
++            else:
++                next_outputs = step(hparams, prev, past=past)
+             logits = next_outputs['logits'][:, -1, :]  / tf.to_float(temperature)
+             logits = top_k_logits(logits, k=top_k)
+             logits = top_p_logits(logits, p=top_p)
+             samples = tf.multinomial(logits, num_samples=1, output_dtype=tf.int32)
+             return [
+-                next_outputs['presents'] if past is None else tf.concat([past, next_outputs['presents']], axis=-2),
++                next_outputs['presents'] if past is None or hparams.attn_residual else tf.concat([past, next_outputs['presents']], axis=-2),
+                 samples,
+                 tf.concat([output, samples], axis=1)
+             ]
