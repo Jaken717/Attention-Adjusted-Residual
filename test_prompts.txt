@@ -1,0 +1,6 @@
+# One prompt per line. Lines starting with # (or blank lines) are ignored.
+The Eiffel Tower is in the city of
+The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of
+The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of
+The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of
+The capital of France is not Berlin. Therefore, the capital of France is
