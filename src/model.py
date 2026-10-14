@@ -22,7 +22,7 @@ def default_hparams():
         n_embd=768,
         n_head=12,
         n_layer=12,
-        attn_residual=True,  # x = sum_h A_h (x + attn_out_h) instead of x = x + attn_out
+        attn_residual=True,  # attention reads A_h (V_h + X_h) and replaces the skip path x = x + a
     )
 
 def shape_list(x):
@@ -80,7 +80,7 @@ def attention_mask(nd, ns, *, dtype):
     return tf.cast(m, dtype)  # [nd, ns]
 
 
-def attn(x, scope, n_state, *, past, hparams):
+def attn(x, scope, n_state, *, past, hparams, residual_x=None):
     assert x.shape.ndims == 3  # Should be [batch, sequence, features]
     assert n_state % hparams.n_head == 0
     if past is not None:
@@ -102,14 +102,16 @@ def attn(x, scope, n_state, *, past, hparams):
         w = w*b - tf.cast(1e10, w.dtype)*(1-b)  # [B, H, T, S]
         return w
 
-    def multihead_attn(q, k, v):
-        # q, k, v have shape [batch, heads, sequence, features]
+    def multihead_attn(q, k, v, x_heads=None):
+        # q, k, v, x_heads have shape [batch, heads, sequence, features]
         w = tf.matmul(q, k, transpose_b=True)  # [B, H, T, D/H] @ [B, H, D/H, S] -> [B, H, T, S]
         w = w * tf.rsqrt(tf.cast(v.shape[-1].value, w.dtype))  # [B, H, T, S]
 
         w = mask_attn_weights(w)  # [B, H, T, S]
         logits = w                # pre-softmax attention scores (scaled, masked); [B, H, T, S]
         w = softmax(w)             # post-softmax attention weights (what the model actually uses); [B, H, T, S]
+        if x_heads is not None:
+            v = v + x_heads  # V_h + X_h: [B, H, T, D/H]
         a = tf.matmul(w, v)  # [B, H, T, S] @ [B, H, S, D/H] -> [B, H, T, D/H]
         return a, w, logits
 
@@ -121,7 +123,14 @@ def attn(x, scope, n_state, *, past, hparams):
             pk, pv = tf.unstack(past, axis=1)  # each [B, H, P, D/H]
             k = tf.concat([pk, k], axis=-2)  # [B, H, S, D/H]
             v = tf.concat([pv, v], axis=-2)  # [B, H, S, D/H]
-        a, w, logits = multihead_attn(q, k, v)  # a: [B, H, T, D/H]; w, logits: [B, H, T, S]
+        if hparams.attn_residual:
+            # Head-wise attention residual: each head attends over V_h + X_h, where X_h is its
+            # D/H slice of the raw (pre-ln_1) residual stream. Needs X at every source position.
+            assert past is None, 'attn_residual needs the full sequence; call model() without past'
+            x_heads = split_heads(residual_x)  # [B, T, D] -> [B, H, T, D/H]
+        else:
+            x_heads = None
+        a, w, logits = multihead_attn(q, k, v, x_heads)  # a: [B, H, T, D/H]; w, logits: [B, H, T, S]
         a = merge_heads(a)  # [B, T, D]
         a = conv1d(a, 'c_proj', n_state)  # [B, T, D]
         return a, present, w, logits
@@ -138,12 +147,9 @@ def mlp(x, scope, n_state, *, hparams):
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present, w, logits = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)  # norm: [B, T, D]; a: [B, T, D]; w, logits: [B, H, T, S]
+        a, present, w, logits = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams, residual_x=x)  # norm: [B, T, D]; a: [B, T, D]; w, logits: [B, H, T, S]
         if hparams.attn_residual:
-            # Attention-adjusted residual: the skip path is mixed across positions by the
-            # summed attention weights. Needs x at every source position, so no k/v cache.
-            assert past is None, 'attn_residual needs the full sequence; call model() without past'
-            x = tf.matmul(tf.reduce_sum(w, axis=1), x) + a  # [B, T, T] @ [B, T, D] -> [B, T, D]
+            x = a  # a = Concat_h[A_h (V_h + X_h)] W_O already carries x; [B, T, D]
         else:
             x = x + a  # [B, T, D]
         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)  # norm: [B, T, D]; m: [B, T, D]
