@@ -1,6 +1,15 @@
 import numpy as np
-import tensorflow as tf
-from tensorflow.contrib.training import HParams
+import tensorflow.compat.v1 as tf
+
+
+class HParams(dict):
+    def __getattr__(self, name):
+        return self[name]
+    def __setattr__(self, name, value):
+        self[name] = value
+    def override_from_dict(self, d):
+        self.update(d)
+        return self
 
 def default_hparams():
     return HParams(
@@ -9,6 +18,7 @@ def default_hparams():
         n_embd=768,
         n_head=12,
         n_layer=12,
+        attn_residual=True,
     )
 
 def shape_list(x):
@@ -66,7 +76,7 @@ def attention_mask(nd, ns, *, dtype):
     return tf.cast(m, dtype)
 
 
-def attn(x, scope, n_state, *, past, hparams):
+def attn(x, scope, n_state, *, past, hparams, residual_x=None):
     assert x.shape.ndims == 3
     assert n_state % hparams.n_head == 0
     if past is not None:
@@ -85,14 +95,17 @@ def attn(x, scope, n_state, *, past, hparams):
         w = w*b - tf.cast(1e10, w.dtype)*(1-b)
         return w
 
-    def multihead_attn(q, k, v):
+    def multihead_attn(q, k, v, x_heads=None):
         w = tf.matmul(q, k, transpose_b=True)
         w = w * tf.rsqrt(tf.cast(v.shape[-1].value, w.dtype))
 
         w = mask_attn_weights(w)
+        logits = w
         w = softmax(w)
+        if x_heads is not None:
+            v = v + x_heads
         a = tf.matmul(w, v)
-        return a
+        return a, w, logits
 
     with tf.variable_scope(scope):
         c = conv1d(x, 'c_attn', n_state*3)
@@ -102,10 +115,15 @@ def attn(x, scope, n_state, *, past, hparams):
             pk, pv = tf.unstack(past, axis=1)
             k = tf.concat([pk, k], axis=-2)
             v = tf.concat([pv, v], axis=-2)
-        a = multihead_attn(q, k, v)
+        if hparams.attn_residual:
+            assert past is None, 'attn_residual needs the full sequence; call model() without past'
+            x_heads = split_heads(residual_x)
+        else:
+            x_heads = None
+        a, w, logits = multihead_attn(q, k, v, x_heads)
         a = merge_heads(a)
         a = conv1d(a, 'c_proj', n_state)
-        return a, present
+        return a, present, w, logits
 
 
 def mlp(x, scope, n_state, *, hparams):
@@ -119,11 +137,14 @@ def mlp(x, scope, n_state, *, hparams):
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
-        x = x + a
+        a, present, w, logits = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams, residual_x=x)
+        if hparams.attn_residual:
+            x = a
+        else:
+            x = x + a
         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)
         x = x + m
-        return x, present
+        return x, present, w, logits
 
 def past_shape(*, hparams, batch_size=None, sequence=None):
     return [batch_size, hparams.n_layer, 2, hparams.n_head, sequence, hparams.n_embd // hparams.n_head]
@@ -153,12 +174,18 @@ def model(hparams, X, past=None, scope='model', reuse=False):
         h = tf.gather(wte, X) + tf.gather(wpe, positions_for(X, past_length))
 
         presents = []
+        attentions = []
+        attention_logits = []
         pasts = tf.unstack(past, axis=1) if past is not None else [None] * hparams.n_layer
         assert len(pasts) == hparams.n_layer
         for layer, past in enumerate(pasts):
-            h, present = block(h, 'h%d' % layer, past=past, hparams=hparams)
+            h, present, w, attn_logits = block(h, 'h%d' % layer, past=past, hparams=hparams)
             presents.append(present)
+            attentions.append(w)
+            attention_logits.append(attn_logits)
         results['present'] = tf.stack(presents, axis=1)
+        results['attentions'] = attentions
+        results['attention_logits'] = attention_logits
         h = norm(h, 'ln_f')
 
         h_flat = tf.reshape(h, [batch*sequence, hparams.n_embd])
