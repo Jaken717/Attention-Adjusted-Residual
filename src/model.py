@@ -67,21 +67,18 @@ def attention_mask(nd, ns, *, dtype):
 
 
 def attn(x, scope, n_state, *, past, hparams):
-    assert x.shape.ndims == 3  # Should be [batch, sequence, features]
+    assert x.shape.ndims == 3
     assert n_state % hparams.n_head == 0
     if past is not None:
-        assert past.shape.ndims == 5  # Should be [batch, 2, heads, sequence, features], where 2 is [k, v]
+        assert past.shape.ndims == 5
 
     def split_heads(x):
-        # From [batch, sequence, features] to [batch, heads, sequence, features]
         return tf.transpose(split_states(x, hparams.n_head), [0, 2, 1, 3])
 
     def merge_heads(x):
-        # Reverse of split_heads
         return merge_states(tf.transpose(x, [0, 2, 1, 3]))
 
     def mask_attn_weights(w):
-        # w has shape [batch, heads, dst_sequence, src_sequence], where information flows from src to dst.
         _, _, nd, ns = shape_list(w)
         b = attention_mask(nd, ns, dtype=w.dtype)
         b = tf.reshape(b, [1, 1, nd, ns])
@@ -89,7 +86,6 @@ def attn(x, scope, n_state, *, past, hparams):
         return w
 
     def multihead_attn(q, k, v):
-        # q, k, v have shape [batch, heads, sequence, features]
         w = tf.matmul(q, k, transpose_b=True)
         w = w * tf.rsqrt(tf.cast(v.shape[-1].value, w.dtype))
 
@@ -156,7 +152,6 @@ def model(hparams, X, past=None, scope='model', reuse=False):
         past_length = 0 if past is None else tf.shape(past)[-2]
         h = tf.gather(wte, X) + tf.gather(wpe, positions_for(X, past_length))
 
-        # Transformer
         presents = []
         pasts = tf.unstack(past, axis=1) if past is not None else [None] * hparams.n_layer
         assert len(pasts) == hparams.n_layer
@@ -166,7 +161,6 @@ def model(hparams, X, past=None, scope='model', reuse=False):
         results['present'] = tf.stack(presents, axis=1)
         h = norm(h, 'ln_f')
 
-        # Language model loss.  Do tokens <n predict token n?
         h_flat = tf.reshape(h, [batch*sequence, hparams.n_embd])
         logits = tf.matmul(h_flat, wte, transpose_b=True)
         logits = tf.reshape(logits, [batch, sequence, hparams.n_vocab])
