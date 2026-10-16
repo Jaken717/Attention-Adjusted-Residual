@@ -19,6 +19,8 @@ def default_hparams():
         n_head=12,
         n_layer=12,
         attn_residual=True,
+        attn_alpha=0.9,
+        attn_proj_residual='approach_2',
     )
 
 def shape_list(x):
@@ -35,15 +37,17 @@ def softmax(x, axis=-1):
 def gelu(x):
     return 0.5*x*(1+tf.tanh(np.sqrt(2/np.pi)*(x+0.044715*tf.pow(x, 3))))
 
-def norm(x, scope, *, axis=-1, epsilon=1e-5):
+def norm(x, scope, *, axis=-1, epsilon=1e-5, affine=True):
     """Normalize to mean = 0, std = 1, then do a diagonal affine transform."""
     with tf.variable_scope(scope):
-        n_state = x.shape[-1].value
-        g = tf.get_variable('g', [n_state], initializer=tf.constant_initializer(1))
-        b = tf.get_variable('b', [n_state], initializer=tf.constant_initializer(0))
         u = tf.reduce_mean(x, axis=axis, keepdims=True)
         s = tf.reduce_mean(tf.square(x-u), axis=axis, keepdims=True)
         x = (x - u) * tf.rsqrt(s + epsilon)
+        if not affine:
+            return x
+        n_state = x.shape[-1].value
+        g = tf.get_variable('g', [n_state], initializer=tf.constant_initializer(1))
+        b = tf.get_variable('b', [n_state], initializer=tf.constant_initializer(0))
         x = x*g + b
         return x
 
@@ -120,9 +124,23 @@ def attn(x, scope, n_state, *, past, hparams, residual_x=None):
             x_heads = split_heads(residual_x)
         else:
             x_heads = None
+        assert hparams.attn_proj_residual in (None, 'approach_1', 'approach_2', 'approach_3', 'approach_4', 'approach_5')
+        if hparams.attn_proj_residual in ('approach_4', 'approach_5'):
+            assert hparams.attn_residual, 'approach_4/5 need residual_x'
+            a, w, logits = multihead_attn(q, k, v)
+            ax = merge_heads(tf.matmul(w, x_heads))
+            if hparams.attn_proj_residual == 'approach_5':
+                ax = hparams.attn_alpha * residual_x + (1 - hparams.attn_alpha) * ax
+            a = conv1d(merge_heads(a), 'c_proj', n_state) + ax
+            return a, present, w, logits
         a, w, logits = multihead_attn(q, k, v, x_heads)
         a = merge_heads(a)
+        if hparams.attn_proj_residual == 'approach_2':
+            a = norm(a, 'ln_y', affine=False)
+        y = a
         a = conv1d(a, 'c_proj', n_state)
+        if hparams.attn_proj_residual in ('approach_1', 'approach_2'):
+            a = a + y
         return a, present, w, logits
 
 
@@ -138,7 +156,7 @@ def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
         a, present, w, logits = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams, residual_x=x)
-        if hparams.attn_residual:
+        if hparams.attn_residual and hparams.attn_proj_residual != 'approach_3':
             x = a
         else:
             x = x + a
