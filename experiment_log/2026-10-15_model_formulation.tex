@@ -1,0 +1,139 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\chg}[1]{\colorbox{orange!15}{$\displaystyle #1$}}
+
+\title{Current Formulation of \code{src/model.py}:\\Head-wise Attention Residual}
+\author{Experiment log, branch \code{attention-experiments}}
+\date{2026-10-15}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+With \code{attn\_residual=True} (the default in \code{default\_hparams}), every attention
+head attends over $V_h + X_h$, where $X_h$ is that head's slice of the raw residual
+stream. The attention output then \emph{replaces} the residual stream instead of being
+added to it. The MLP sublayer is unchanged. Terms that differ from standard GPT-2 are
+\colorbox{orange!15}{highlighted}.
+
+\section*{Notation}
+Row-vector convention: each token is a row and weights multiply on the right
+(\code{x @ W}), which matches \code{conv1d}.
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Symbol & Meaning & GPT-2 small \\
+\midrule
+$T$ & sequence length & -- \\
+$D$ & model width (\code{n\_embd}) & 768 \\
+$H$ & number of heads (\code{n\_head}) & 12 \\
+$d_h = D/H$ & per-head width & 64 \\
+$L$ & number of layers (\code{n\_layer}) & 12 \\
+$V$ & vocabulary size & 50257 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Embedding \quad (\code{model})}
+\[
+X^{(0)} = W_{te}[\text{tokens}] + W_{pe}[\text{positions}] \in \mathbb{R}^{T\times D}
+\]
+
+\section{Transformer block $\ell = 0,\dots,L-1$ \quad (\code{block}, \code{attn})}
+Write $X = X^{(\ell)}$.
+
+\paragraph{LayerNorm (\code{ln\_1}).}
+\[
+\tilde X = \mathrm{LN}_1(X) = \frac{X-\mu}{\sqrt{\sigma^2+\epsilon}}\odot g_1 + b_1
+\]
+
+\paragraph{Q, K, V (\code{c\_attn}).} The fused weight is $W_{QKV}\in\mathbb{R}^{D\times 3D}$:
+\[
+[\,Q \mid K \mid V\,] = \tilde X\, W_{QKV} + b_{QKV},
+\qquad Q_h, K_h, V_h \in \mathbb{R}^{T\times d_h}.
+\]
+
+\paragraph{Per-head residual slice (new).} This is taken from the \emph{pre-LayerNorm} stream:
+\[
+\chg{X_h = X[:,\; h d_h : (h+1) d_h] \in \mathbb{R}^{T\times d_h}}
+\]
+
+\paragraph{Attention pattern (unchanged).}
+\[
+S_h = \frac{Q_h K_h^\top}{\sqrt{d_h}}, \qquad
+S_h[i,j] \leftarrow -10^{10} \text{ for } j>i, \qquad
+A_h = \mathrm{softmax}_{\text{row}}(S_h).
+\]
+
+\paragraph{Head output (modified).}
+\[
+O_h = A_h\,\chg{(V_h + X_h)} \in \mathbb{R}^{T\times d_h}
+\qquad\text{(standard: } O_h = A_h V_h\text{)}
+\]
+
+\paragraph{Output projection $W_O$ (\code{attn/c\_proj}).} $W_O$ is the variable
+\code{model/h$\ell$/attn/c\_proj/w}, with shape $[1, D, D]$ and used as $D\times D$:
+\[
+\mathrm{Attn}(X) = [\,O_1 \mid O_2 \mid \cdots \mid O_H\,]\, W_O + b_O .
+\]
+
+\paragraph{Attention residual (modified).}
+\[
+\chg{X' = \mathrm{Attn}(X)}
+\qquad\text{(standard: } X' = X + \mathrm{Attn}(X)\text{)}
+\]
+
+\paragraph{MLP with identity residual (unchanged).} $W_{fc}\in\mathbb{R}^{D\times 4D}$
+and $W_{proj}\in\mathbb{R}^{4D\times D}$:
+\[
+X^{(\ell+1)} = X' + \mathrm{GELU}\!\big(\mathrm{LN}_2(X')\,W_{fc} + b_{fc}\big)\,W_{proj} + b_{proj}.
+\]
+
+\section{Output \quad (\code{ln\_f}, tied embedding)}
+\[
+\text{logits} = \mathrm{LN}_f\big(X^{(L)}\big)\, W_{te}^{\top} \in \mathbb{R}^{T\times V}
+\]
+
+\section{Expanded attention sublayer}
+Let $W_O^{(h)} = W_O[h d_h:(h+1) d_h,\,:] \in \mathbb{R}^{d_h\times D}$ be the rows of
+$W_O$ that belong to head $h$. Concatenation followed by $W_O$ is a sum over heads, so
+\[
+X' \;=\; \underbrace{\sum_{h} A_h V_h\, W_O^{(h)}}_{\text{standard attention}}
+\;+\; \underbrace{\sum_{h} A_h X_h\, W_O^{(h)}}_{\text{replaces the identity skip } X}
+\;+\; b_O .
+\]
+
+\section{Implications}
+\begin{itemize}
+  \item \textbf{The residual is mixed across positions.} Token $i$ no longer keeps its own
+        state $X_i$. It receives $\sum_j A_h[i,j]\,X_{h,j}$, a mixture of earlier tokens'
+        residual slices weighted by that head's attention pattern.
+  \item \textbf{The residual goes through $W_O$.} The skip path becomes
+        $\sum_h A_h X_h W_O^{(h)}$ instead of the identity. The pretrained $W_O$ was trained to
+        project value vectors, not to reconstruct $X$, so the stream is distorted in every layer.
+  \item \textbf{Pre-LN versus post-LN inputs.} $V_h$ comes from $\mathrm{LN}_1(X)$, but $X_h$
+        comes from the raw $X$. Their scales can differ substantially, especially in deep
+        layers where the norm of the residual stream grows.
+  \item \textbf{The effect compounds over depth.} Only the MLP sublayer keeps a true identity
+        path, and the attention replacement applies in all $L=12$ layers.
+  \item \textbf{No KV cache.} $X_h$ is needed at every source position, so
+        \code{model()} asserts \code{past is None}.
+\end{itemize}
+
+\section*{Code references}
+\begin{tabular}{ll}
+\code{src/model.py:25} & \code{attn\_residual=True} flag \\
+\code{src/model.py:113\textendash{}115} & $O_h = A_h (V_h + X_h)$ \\
+\code{src/model.py:126\textendash{}131} & $X_h$ = \code{split\_heads(residual\_x)} \\
+\code{src/model.py:134\textendash{}135} & \code{merge\_heads}, then $W_O$ (\code{c\_proj}) \\
+\code{src/model.py:150\textendash{}154} & $X' = \mathrm{Attn}(X)$ replaces $X + \mathrm{Attn}(X)$ \\
+\end{tabular}
+
+\end{document}

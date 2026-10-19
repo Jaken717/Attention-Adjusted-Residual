@@ -1,0 +1,12 @@
+PROMPT:
+The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of
+
+GENERATED CONTINUATION:
+ New York.
+
+There are also numerous websites for photos of the iconic Eiffel Tower,
+
+FULL TEXT:
+The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of New York.
+
+There are also numerous websites for photos of the iconic Eiffel Tower,

@@ -1,0 +1,40 @@
+{
+ "matched_evals": {
+  "val4M": {
+   "unigram": 7.631197493321164,
+   "openai_gpt2_124M": 3.2040109634399414,
+   "baseline": 3.1907219886779785,
+   "approach_1": 7.63175106048584,
+   "approach_2": 7.630909442901611,
+   "approach_3": 3.201861619949341,
+   "approach_4": 7.623363971710205,
+   "approach_5": 3.233912229537964
+  },
+  "val20M": {
+   "unigram": 7.648887000283684,
+   "openai_gpt2_124M": 3.295147180557251,
+   "baseline": 3.31235671043396,
+   "approach_1": 7.652207851409912,
+   "approach_2": 7.65183162689209,
+   "approach_3": 3.3238162994384766,
+   "approach_4": 7.645999908447266,
+   "approach_5": 3.355475902557373
+  },
+  "steps": {
+   "baseline": 4768,
+   "approach_1": 3000,
+   "approach_2": 3000,
+   "approach_3": 4768,
+   "approach_4": 4768,
+   "approach_5": 4768
+  }
+ },
+ "steps_trained": {
+  "baseline": 4768,
+  "approach_1": 3951,
+  "approach_2": 3741,
+  "approach_3": 4768,
+  "approach_4": 4768,
+  "approach_5": 4768
+ }
+}

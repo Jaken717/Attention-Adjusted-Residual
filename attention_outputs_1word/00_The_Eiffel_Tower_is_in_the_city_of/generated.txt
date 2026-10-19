@@ -1,0 +1,8 @@
+PROMPT:
+The Eiffel Tower is in the city of
+
+GENERATED CONTINUATION:
+ Paris
+
+FULL TEXT:
+The Eiffel Tower is in the city of Paris

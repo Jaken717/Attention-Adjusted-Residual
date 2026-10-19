@@ -1,0 +1,52 @@
+\clearpage
+\appendix
+\sloppy
+\section{Code for each variant (from \code{src/model.py})}\label{app:code}
+
+All listings are taken verbatim from \code{src/model.py}, including comments. A snapshot of the file is saved in
+\code{code/model.py}. Line numbers are the file's own. For each variant, only the lines of \code{attn} and
+\code{block} that run for its \code{hparams} setting are shown. A jump in the line numbers means the lines in
+between belong to other variants or to the \code{past} (incremental decoding) path. The training runs used the
+PyTorch port \code{train/gpt2\_torch.py} (snapshot in \code{code/gpt2\_torch.py}), which implements the same
+equations.
+
+\lstset{numbers=left, numberstyle=\tiny\color{ink2}, numbersep=6pt, xleftmargin=18pt, consecutivenumbers=false}
+\newcommand{\varcode}[5]{\subsection{#1}\noindent{\small #2\\\code{#3}}\par\nopagebreak
+\lstinputlisting[linerange={#4}, title={in \code{attn()}}]{code/model.py}
+\lstinputlisting[linerange={#5}, title={in \code{block()}}]{code/model.py}}
+
+\subsection{Shared code}
+The settings (\code{default\_hparams}), the LayerNorm with the \code{affine} switch that approach\_2 uses, and
+the per-head attention \code{multihead\_attn}. Its \code{x\_heads} argument adds $X_h$ to $V_h$ before
+$A_h$ is applied.
+\lstinputlisting[linerange={18-33}, title={\code{default\_hparams()}}]{code/model.py}
+\lstinputlisting[linerange={49-61}, title={\code{norm()}}]{code/model.py}
+\lstinputlisting[linerange={114-125}, title={\code{multihead\_attn()}, inside \code{attn()}}]{code/model.py}
+
+\varcode{Baseline (original GPT-2)}{$X' = X + \cat[A_hV_h]\,W_O + b_O$.}
+{attn\_residual=False, attn\_proj\_residual=None}
+{128-130,135-135,140-141,151-152,155-156,159-159}{173-174,176-180}
+
+\varcode{approach\_1}{$Y=\cat[A_h(V_h+X_h)]$,\quad $X' = YW_O + b_O + Y$.}
+{attn\_residual=True, attn\_proj\_residual='approach\_1'}
+{128-130,135-135,139-139,151-152,155-159}{173-175,178-180}
+
+\varcode{approach\_2}{$Y=\mathrm{LN}(\cat[A_h(V_h+X_h)])$ (no affine),\quad $X' = YW_O + b_O + Y$.}
+{attn\_residual=True, attn\_proj\_residual='approach\_2'}
+{128-130,135-135,139-139,151-159}{173-175,178-180}
+
+\varcode{approach\_3}{$Y=\cat[A_h(V_h+X_h)]$,\quad $X' = X + YW_O + b_O$.}
+{attn\_residual=True, attn\_proj\_residual='approach\_3'}
+{128-130,135-135,139-139,151-152,155-156,159-159}{173-174,176-180}
+
+\varcode{approach\_4}{$X' = \cat[A_hV_h]\,W_O + b_O + \cat[A_hX_h]$.}
+{attn\_residual=True, attn\_proj\_residual='approach\_4'}
+{128-130,135-135,139-139,143-143,145-146,149-150}{173-175,178-180}
+
+\varcode{approach\_5}{$X' = \cat[A_hV_h]\,W_O + b_O + \alpha X + (1-\alpha)\cat[A_hX_h]$, $\alpha=0.9$.}
+{attn\_residual=True, attn\_proj\_residual='approach\_5', attn\_alpha=0.9}
+{128-130,135-135,139-139,143-143,145-150}{173-175,178-180}
+
+\subsection{Complete \code{attn} and \code{block}}\label{app:full}
+The full functions, unedited, with all branches.
+\lstinputlisting[firstline=92, lastline=180]{code/model.py}

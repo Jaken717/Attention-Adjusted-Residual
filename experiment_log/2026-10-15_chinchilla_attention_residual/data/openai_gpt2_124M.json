@@ -1,0 +1,5 @@
+{
+  "model": "openai-gpt2-124M (pretrained)",
+  "val_loss": 3.295146411364196,
+  "eval_tokens": 20000000
+}

@@ -1,0 +1,53 @@
+{
+  "openai_gpt2_124M_pretrained_val_loss": 3.295146411364196,
+  "unigram_val_ce": 7.648827226557435,
+  "matched_evals": {
+    "note": "Val loss of every model on the same two subsets of val.bin. 'val4M' = first 4,194,304 tokens (used for the curve points every 250 steps); 'val20M' = the full 20M-token split. Approaches use their last checkpoint (step 3000).",
+    "val4M": {
+      "baseline_final": 3.1907220724970102,
+      "approach_1_step3000": 7.631750855594873,
+      "approach_2_step3000": 7.630909785628319,
+      "openai_gpt2_124M": 3.204011168330908,
+      "unigram": 7.631197493321164
+    },
+    "val20M": {
+      "baseline_final": 3.3123577039749894,
+      "approach_1_step3000": 7.652206288791094,
+      "approach_2_step3000": 7.6518329800152385,
+      "openai_gpt2_124M": 3.295146411364196,
+      "unigram": 7.648782
+    }
+  },
+  "runs": {
+    "baseline": {
+      "steps_trained": 4768,
+      "tokens_trained": 2499805184,
+      "final_val_loss_20M": 3.3123613080040353,
+      "last_val_loss": 3.3123613080040353,
+      "last_val_step": 4768,
+      "probe_checkpoint": "baseline@step4768",
+      "kl_to_unigram": 4.356496334075928,
+      "status": "completed"
+    },
+    "approach_1": {
+      "steps_trained": 3951,
+      "tokens_trained": 2071461888,
+      "final_val_loss_20M": null,
+      "last_val_loss": 7.62790871411562,
+      "last_val_step": 3750,
+      "probe_checkpoint": "approach_1@step3000",
+      "kl_to_unigram": 0.004585558548569679,
+      "status": "stopped (collapsed)"
+    },
+    "approach_2": {
+      "steps_trained": 3741,
+      "tokens_trained": 1961361408,
+      "final_val_loss_20M": null,
+      "last_val_loss": 7.62850546091795,
+      "last_val_step": 3500,
+      "probe_checkpoint": "approach_2@step3000",
+      "kl_to_unigram": 0.004211373161524534,
+      "status": "stopped (collapsed)"
+    }
+  }
+}

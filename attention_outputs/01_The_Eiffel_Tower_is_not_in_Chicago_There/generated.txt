@@ -1,0 +1,12 @@
+PROMPT:
+The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of
+
+GENERATED CONTINUATION:
+ Chicago.
+
+On December 15, 1829, the U.S. Capitol opened in front
+
+FULL TEXT:
+The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of Chicago.
+
+On December 15, 1829, the U.S. Capitol opened in front

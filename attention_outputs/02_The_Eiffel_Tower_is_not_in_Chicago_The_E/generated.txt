@@ -1,0 +1,8 @@
+PROMPT:
+The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of
+
+GENERATED CONTINUATION:
+ Chicago. In other words, the Eiffel Tower is not in Chicago. (It's also
+
+FULL TEXT:
+The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of Chicago. In other words, the Eiffel Tower is not in Chicago. (It's also

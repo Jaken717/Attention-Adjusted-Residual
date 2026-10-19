@@ -1,0 +1,22 @@
+{
+  "variant": "approach_2",
+  "data": "/local/scratch/a/liu3170/data/fineweb_edu",
+  "out": "/local/scratch/a/liu3170/runs/chinchilla/approach_2",
+  "tokens": 2500000000.0,
+  "batch_tokens": 524288,
+  "micro_batch": 32,
+  "seq_len": 1024,
+  "lr": 0.0006,
+  "min_lr_frac": 0.1,
+  "warmup": 250,
+  "weight_decay": 0.1,
+  "grad_clip": 1.0,
+  "eval_every": 250,
+  "eval_tokens": 4194304,
+  "final_eval_tokens": 20000000,
+  "ckpt_every": 1000,
+  "max_steps": null,
+  "seed": 1337,
+  "no_compile": false,
+  "steps": 4768
+}

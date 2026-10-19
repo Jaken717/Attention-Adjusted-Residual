@@ -1,0 +1,12 @@
+PROMPT:
+The Eiffel Tower is in the city of
+
+GENERATED CONTINUATION:
+ Paris.
+
+The Eiffel Tower is pictured on November 17 in Paris REUTERS/Chris Watt
+
+FULL TEXT:
+The Eiffel Tower is in the city of Paris.
+
+The Eiffel Tower is pictured on November 17 in Paris REUTERS/Chris Watt

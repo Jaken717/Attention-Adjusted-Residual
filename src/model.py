@@ -23,6 +23,13 @@ def default_hparams():
         n_head=12,
         n_layer=12,
         attn_residual=True,  # attention reads A_h (V_h + X_h) and replaces the skip path x = x + a
+        # Y = Concat_h[A_h (V_h + X_h)]. None: Y W_O + b_O; 'approach_1': Y W_O + b_O + Y;
+        # 'approach_2': Y <- LN(Y) (no affine), then Y W_O + b_O + Y
+        # 'approach_3': Y W_O + b_O, and block keeps the identity skip x = x + a
+        # 'approach_4': Concat_h[A_h V_h] W_O + b_O + Concat_h[A_h X_h] (V_h and X_h attended separately)
+        # 'approach_5': Concat_h[A_h V_h] W_O + b_O + attn_alpha X + (1 - attn_alpha) Concat_h[A_h X_h]
+        attn_alpha=0.9,
+        attn_proj_residual='approach_2',
     )
 
 def shape_list(x):
@@ -39,15 +46,17 @@ def softmax(x, axis=-1):
 def gelu(x):
     return 0.5*x*(1+tf.tanh(np.sqrt(2/np.pi)*(x+0.044715*tf.pow(x, 3))))  # same shape as x, [B, T, 4D] in mlp
 
-def norm(x, scope, *, axis=-1, epsilon=1e-5):
+def norm(x, scope, *, axis=-1, epsilon=1e-5, affine=True):
     """Normalize to mean = 0, std = 1, then do a diagonal affine transform."""
     with tf.variable_scope(scope):
-        n_state = x.shape[-1].value
-        g = tf.get_variable('g', [n_state], initializer=tf.constant_initializer(1))  # [D]
-        b = tf.get_variable('b', [n_state], initializer=tf.constant_initializer(0))  # [D]
         u = tf.reduce_mean(x, axis=axis, keepdims=True)  # [B, T, 1]
         s = tf.reduce_mean(tf.square(x-u), axis=axis, keepdims=True)  # [B, T, 1]
         x = (x - u) * tf.rsqrt(s + epsilon)  # [B, T, D]
+        if not affine:
+            return x  # no g, b variables, so pretrained checkpoints still restore
+        n_state = x.shape[-1].value
+        g = tf.get_variable('g', [n_state], initializer=tf.constant_initializer(1))  # [D]
+        b = tf.get_variable('b', [n_state], initializer=tf.constant_initializer(0))  # [D]
         x = x*g + b  # [B, T, D]
         return x
 
@@ -130,9 +139,23 @@ def attn(x, scope, n_state, *, past, hparams, residual_x=None):
             x_heads = split_heads(residual_x)  # [B, T, D] -> [B, H, T, D/H]
         else:
             x_heads = None
+        assert hparams.attn_proj_residual in (None, 'approach_1', 'approach_2', 'approach_3', 'approach_4', 'approach_5')
+        if hparams.attn_proj_residual in ('approach_4', 'approach_5'):
+            assert hparams.attn_residual, 'approach_4/5 need residual_x'
+            a, w, logits = multihead_attn(q, k, v)  # A_h V_h: [B, H, T, D/H]
+            ax = merge_heads(tf.matmul(w, x_heads))  # Concat_h[A_h X_h]: [B, H, T, S] @ [B, H, S, D/H] -> [B, T, D]
+            if hparams.attn_proj_residual == 'approach_5':
+                ax = hparams.attn_alpha * residual_x + (1 - hparams.attn_alpha) * ax  # alpha X + (1 - alpha) Concat_h[A_h X_h]
+            a = conv1d(merge_heads(a), 'c_proj', n_state) + ax  # [B, T, D]
+            return a, present, w, logits
         a, w, logits = multihead_attn(q, k, v, x_heads)  # a: [B, H, T, D/H]; w, logits: [B, H, T, S]
         a = merge_heads(a)  # [B, T, D]
+        if hparams.attn_proj_residual == 'approach_2':
+            a = norm(a, 'ln_y', affine=False)  # Y <- LN(Y); [B, T, D]
+        y = a  # Y = Concat_h[A_h (V_h + X_h)], pre-projection; [B, T, D]
         a = conv1d(a, 'c_proj', n_state)  # [B, T, D]
+        if hparams.attn_proj_residual in ('approach_1', 'approach_2'):
+            a = a + y  # Y W_O + b_O + Y; [B, T, D]
         return a, present, w, logits
 
 
@@ -148,7 +171,7 @@ def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
         a, present, w, logits = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams, residual_x=x)  # norm: [B, T, D]; a: [B, T, D]; w, logits: [B, H, T, S]
-        if hparams.attn_residual:
+        if hparams.attn_residual and hparams.attn_proj_residual != 'approach_3':
             x = a  # a = Concat_h[A_h (V_h + X_h)] W_O already carries x; [B, T, D]
         else:
             x = x + a  # [B, T, D]

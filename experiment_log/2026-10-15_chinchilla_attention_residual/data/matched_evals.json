@@ -1,0 +1,5 @@
+{
+  "note": "Val loss of every model on the same two subsets of val.bin. 'val4M' = first 4,194,304 tokens (used for the curve points every 250 steps); 'val20M' = the full 20M-token split. Approaches use their last checkpoint (step 3000).",
+  "val4M": {"baseline_final": 3.1907220724970102, "approach_1_step3000": 7.631750855594873, "approach_2_step3000": 7.630909785628319, "openai_gpt2_124M": 3.204011168330908, "unigram": 7.631197493321164},
+  "val20M": {"baseline_final": 3.3123577039749894, "approach_1_step3000": 7.652206288791094, "approach_2_step3000": 7.6518329800152385, "openai_gpt2_124M": 3.295146411364196, "unigram": 7.648782}
+}

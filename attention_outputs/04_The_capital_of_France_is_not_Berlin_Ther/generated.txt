@@ -1,0 +1,8 @@
+PROMPT:
+The capital of France is not Berlin. Therefore, the capital of France is
+
+GENERATED CONTINUATION:
+ not Berlin. The first stage is the first point of contact between our two European neighbors on the sea
+
+FULL TEXT:
+The capital of France is not Berlin. Therefore, the capital of France is not Berlin. The first stage is the first point of contact between our two European neighbors on the sea

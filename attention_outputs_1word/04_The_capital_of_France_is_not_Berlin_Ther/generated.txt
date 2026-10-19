@@ -1,0 +1,8 @@
+PROMPT:
+The capital of France is not Berlin. Therefore, the capital of France is
+
+GENERATED CONTINUATION:
+ not
+
+FULL TEXT:
+The capital of France is not Berlin. Therefore, the capital of France is not
