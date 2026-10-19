@@ -9,6 +9,9 @@ def default_hparams():
         n_embd=768,
         n_head=12,
         n_layer=12,
+        # 3 residual: Z_h = A_h X_h + X_h, Y = Concat_h[Z_h W_vh + Z_h], X <- Y W_o + Y.
+        # False gives the original GPT-2 block (needed to load the pretrained OpenAI checkpoints).
+        three_residual=True,
     )
 
 def shape_list(x):
@@ -66,7 +69,7 @@ def attention_mask(nd, ns, *, dtype):
     return tf.cast(m, dtype)
 
 
-def attn(x, scope, n_state, *, past, hparams):
+def attn(x, scope, n_state, *, past, hparams, residual_x=None):
     assert x.shape.ndims == 3  # Should be [batch, sequence, features]
     assert n_state % hparams.n_head == 0
     if past is not None:
@@ -99,6 +102,24 @@ def attn(x, scope, n_state, *, past, hparams):
         return a
 
     with tf.variable_scope(scope):
+        if hparams.three_residual:
+            # A_h comes from ln_1(X) through Q, K; the attended values are X_h, the raw (pre-ln_1) residual stream.
+            c = conv1d(x, 'c_attn', n_state*2)
+            q, k = map(split_heads, tf.split(c, 2, axis=2))
+            xh = split_heads(residual_x)  # X_h: [batch, heads, sequence, features/heads]
+            present = tf.stack([k, xh], axis=1)  # cache X_h in place of V_h, so sampling with past still works
+            xs = xh
+            if past is not None:
+                pk, px = tf.unstack(past, axis=1)
+                k = tf.concat([pk, k], axis=-2)
+                xs = tf.concat([px, xh], axis=-2)
+            z = multihead_attn(q, k, xs) + xh  # Z_h = A_h X_h + X_h
+            d = n_state // hparams.n_head
+            w_v = tf.get_variable('w_v', [hparams.n_head, d, d], initializer=tf.random_normal_initializer(stddev=0.02))
+            z = tf.einsum('bhtd,hde->bhte', z, w_v) + z  # Z_h W_vh + Z_h
+            y = merge_heads(z)  # Y = Concat_h[...]
+            a = conv1d(y, 'c_proj', n_state) + y  # Y W_o + Y
+            return a, present
         c = conv1d(x, 'c_attn', n_state*3)
         q, k, v = map(split_heads, tf.split(c, 3, axis=2))
         present = tf.stack([k, v], axis=1)
@@ -123,8 +144,11 @@ def mlp(x, scope, n_state, *, hparams):
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
-        x = x + a
+        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams, residual_x=x)
+        if hparams.three_residual:
+            x = a  # a = Y W_o + Y already carries X, so no extra skip
+        else:
+            x = x + a
         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)
         x = x + m
         return x, present
