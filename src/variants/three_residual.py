@@ -66,7 +66,7 @@ def attention_mask(nd, ns, *, dtype):
     return tf.cast(m, dtype)
 
 
-def attn(x, scope, n_state, *, past, hparams):
+def attn(x, scope, n_state, *, past, hparams, x_raw):
     assert x.shape.ndims == 3  # Should be [batch, sequence, features]
     assert n_state % hparams.n_head == 0
     if past is not None:
@@ -99,16 +99,20 @@ def attn(x, scope, n_state, *, past, hparams):
         return a
 
     with tf.variable_scope(scope):
-        c = conv1d(x, 'c_attn', n_state*3)
-        q, k, v = map(split_heads, tf.split(c, 3, axis=2))
+        c = conv1d(x, 'c_attn', n_state*2)
+        q, k = map(split_heads, tf.split(c, 2, axis=2))  # no W_V: the values are X_h
+        v = xh = split_heads(x_raw)  # X_h: head h's slice of the block input (before ln_1)
         present = tf.stack([k, v], axis=1)
         if past is not None:
             pk, pv = tf.unstack(past, axis=1)
             k = tf.concat([pk, k], axis=-2)
             v = tf.concat([pv, v], axis=-2)
-        a = multihead_attn(q, k, v)
+        a = multihead_attn(q, k, v) + xh  # Z_h = A_h X_h + X_h
+        w_v = tf.get_variable('w_v', [hparams.n_head, n_state // hparams.n_head, n_state // hparams.n_head],
+                              initializer=tf.random_normal_initializer(stddev=0.02))
+        a = tf.einsum('bhtd,hde->bhte', a, w_v) + a  # Z_h W_vh + Z_h, one d x d matrix per head
         a = merge_heads(a)
-        a = conv1d(a, 'c_proj', n_state)
+        a = conv1d(a, 'c_proj', n_state) + a  # Y W_O + b_O + Y
         return a, present
 
 
@@ -123,8 +127,8 @@ def mlp(x, scope, n_state, *, hparams):
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
-        x = x + a
+        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams, x_raw=x)
+        x = a  # no identity skip: the attention output replaces x
         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)
         x = x + m
         return x, present

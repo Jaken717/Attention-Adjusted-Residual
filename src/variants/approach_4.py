@@ -66,11 +66,11 @@ def attention_mask(nd, ns, *, dtype):
     return tf.cast(m, dtype)
 
 
-def attn(x, scope, n_state, *, past, hparams):
+def attn(x, scope, n_state, *, past, hparams, x_raw):
     assert x.shape.ndims == 3  # Should be [batch, sequence, features]
     assert n_state % hparams.n_head == 0
     if past is not None:
-        assert past.shape.ndims == 5  # Should be [batch, 2, heads, sequence, features], where 2 is [k, v]
+        assert past.shape.ndims == 5  # Should be [batch, 3, heads, sequence, features], where 3 is [k, v, x]
 
     def split_heads(x):
         # From [batch, sequence, features] to [batch, heads, sequence, features]
@@ -101,14 +101,17 @@ def attn(x, scope, n_state, *, past, hparams):
     with tf.variable_scope(scope):
         c = conv1d(x, 'c_attn', n_state*3)
         q, k, v = map(split_heads, tf.split(c, 3, axis=2))
-        present = tf.stack([k, v], axis=1)
+        xh = split_heads(x_raw)  # X_h: head h's slice of the block input (before ln_1)
+        present = tf.stack([k, v, xh], axis=1)
         if past is not None:
-            pk, pv = tf.unstack(past, axis=1)
+            pk, pv, px = tf.unstack(past, axis=1)
             k = tf.concat([pk, k], axis=-2)
             v = tf.concat([pv, v], axis=-2)
+            xh = tf.concat([px, xh], axis=-2)
         a = multihead_attn(q, k, v)
+        ax = multihead_attn(q, k, xh)  # A_h X_h, same A_h as A_h V_h
         a = merge_heads(a)
-        a = conv1d(a, 'c_proj', n_state)
+        a = conv1d(a, 'c_proj', n_state) + merge_heads(ax)  # Concat_h[A_h V_h] W_O + b_O + Concat_h[A_h X_h]
         return a, present
 
 
@@ -123,14 +126,14 @@ def mlp(x, scope, n_state, *, hparams):
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
-        x = x + a
+        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams, x_raw=x)
+        x = a  # no identity skip: the attention output replaces x
         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)
         x = x + m
         return x, present
 
 def past_shape(*, hparams, batch_size=None, sequence=None):
-    return [batch_size, hparams.n_layer, 2, hparams.n_head, sequence, hparams.n_embd // hparams.n_head]
+    return [batch_size, hparams.n_layer, 3, hparams.n_head, sequence, hparams.n_embd // hparams.n_head]
 
 def expand_tile(value, size):
     """Add a new axis of given size."""

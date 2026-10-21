@@ -66,7 +66,7 @@ def attention_mask(nd, ns, *, dtype):
     return tf.cast(m, dtype)
 
 
-def attn(x, scope, n_state, *, past, hparams):
+def attn(x, scope, n_state, *, past, hparams, x_raw):
     assert x.shape.ndims == 3  # Should be [batch, sequence, features]
     assert n_state % hparams.n_head == 0
     if past is not None:
@@ -101,6 +101,7 @@ def attn(x, scope, n_state, *, past, hparams):
     with tf.variable_scope(scope):
         c = conv1d(x, 'c_attn', n_state*3)
         q, k, v = map(split_heads, tf.split(c, 3, axis=2))
+        v = v + split_heads(x_raw)  # V_h + X_h, where X_h is head h's slice of the block input (before ln_1)
         present = tf.stack([k, v], axis=1)
         if past is not None:
             pk, pv = tf.unstack(past, axis=1)
@@ -123,7 +124,7 @@ def mlp(x, scope, n_state, *, hparams):
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
+        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams, x_raw=x)
         x = x + a
         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)
         x = x + m
