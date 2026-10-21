@@ -68,6 +68,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--variant', choices=VARIANTS, required=True)
     ap.add_argument('--alpha', type=float, default=0.9, help='approach_5: weight of the unmixed skip X')
+    ap.add_argument('--diag_bias', type=float, default=0.0, help='three_residual: initial bias on the self logit')
+    ap.add_argument('--diag_learn', action='store_true', help='three_residual: learn the self-logit bias per head')
+    ap.add_argument('--anneal_steps', type=int, default=0, help='three_residual: lower diag_bias linearly to 0 over this many steps')
+    ap.add_argument('--save_steps', type=str, default='', help='comma-separated steps at which to also keep ckpt_step<N>.pt (model only)')
+    ap.add_argument('--mimetic', type=float, default=0.0, help='three_residual: W_Q = W_K = mimetic * orthogonal at init')
     ap.add_argument('--data', required=True)
     ap.add_argument('--out', required=True)
     ap.add_argument('--tokens', type=float, default=2.5e9)
@@ -107,7 +112,8 @@ def main():
     grad_accum = args.batch_tokens // (B * T * world)  # micro-batches per rank per step
     args.steps = int(args.tokens // args.batch_tokens)
 
-    model = GPT(GPTConfig(variant=args.variant, alpha=args.alpha)).to(device)
+    model = GPT(GPTConfig(variant=args.variant, alpha=args.alpha, diag_bias=args.diag_bias,
+                          diag_learn=args.diag_learn, mimetic=args.mimetic)).to(device)
     decay = [p for p in model.parameters() if p.dim() >= 2]
     no_decay = [p for p in model.parameters() if p.dim() < 2]
     opt = torch.optim.AdamW([{'params': decay, 'weight_decay': args.weight_decay},
@@ -140,6 +146,10 @@ def main():
     end = args.steps if args.max_steps is None else min(args.steps, args.max_steps)
     t0 = time.time()
     for step in range(start, end):
+        diag = None
+        if args.anneal_steps:
+            diag = args.diag_bias * max(0.0, 1 - step / args.anneal_steps)
+            model.set_diag(diag)
         if step % args.eval_every == 0:
             vl = evaluate(cmodel, val_path, B, T, args.eval_tokens, device, rank, world)
             rec = {'step': step, 'tokens': step * args.batch_tokens, 'val_loss': vl}
@@ -171,6 +181,8 @@ def main():
         train_loss = (loss_acc / grad_accum).item()
         rec = {'step': step, 'train_loss': train_loss, 'lr': lr, 'grad_norm': norm.item(),
                'dt': dt, 'tok_per_s': args.batch_tokens / dt}
+        if diag is not None:
+            rec['diag_bias'] = diag
         if master:
             log.write(json.dumps(rec) + '\n')
             if step % 10 == 0:
@@ -180,6 +192,9 @@ def main():
             if master:
                 print('non-finite loss, stopping', flush=True)
             break
+        if master and str(step + 1) in args.save_steps.split(','):
+            torch.save({'model': model.state_dict(), 'step': step + 1, 'config': vars(args)},
+                       os.path.join(args.out, f'ckpt_step{step + 1}.pt'))
         if master and ((step + 1) % args.ckpt_every == 0 or step + 1 == args.steps):
             torch.save({'model': model.state_dict(), 'opt': opt.state_dict(), 'step': step + 1,
                         'config': vars(args)}, ckpt_path)

@@ -1,0 +1,367 @@
+{
+ "args": {
+  "run": "/local/scratch/a/liu3170/runs/openwebtext/baseline_diag8_anneal1000",
+  "out": "/local/scratch/a/liu3170/runs/openwebtext/ft_negation/baseline",
+  "data": "/local/scratch/a/liu3170/data/openwebtext",
+  "prompts": "/local/scratch/a/liu3170/gpt-2/test_prompts.txt",
+  "steps": 400,
+  "batch": 64,
+  "owt_batch": 8,
+  "lr": 3e-05,
+  "seed": 0
+ },
+ "split": {
+  "landmark": {
+   "heldout": [
+    "The Golden Gate Bridge",
+    "The Acropolis",
+    "The Sydney Opera House",
+    "Camp Nou",
+    "The Bund",
+    "The Forbidden City",
+    "The CN Tower",
+    "Buckingham Palace",
+    "The Statue of Liberty",
+    "The Rijksmuseum",
+    "The Petronas Towers",
+    "Anfield",
+    "The Gateway Arch",
+    "The Grand Ole Opry"
+   ],
+   "train": [
+    "The Rock and Roll Hall of Fame",
+    "The Western Wall",
+    "The Colosseum",
+    "The Brandenburg Gate",
+    "The Uffizi Gallery",
+    "The Alhambra",
+    "The Space Needle",
+    "The White House",
+    "The Little Mermaid statue",
+    "The Burj Khalifa",
+    "The Hollywood sign",
+    "The Sagrada Familia",
+    "Central Park",
+    "The Taj Mahal",
+    "The Brooklyn Bridge",
+    "Big Ben",
+    "The Smithsonian",
+    "Old Trafford",
+    "The French Quarter",
+    "The Tower of London",
+    "The Rialto Bridge",
+    "The Blue Mosque",
+    "Times Square",
+    "The Parthenon",
+    "The Atomium",
+    "The Leaning Tower of Pisa",
+    "Wembley Stadium",
+    "Tiananmen Square",
+    "The Willis Tower",
+    "The Empire State Building",
+    "Charles Bridge",
+    "Alcatraz",
+    "The Prado Museum",
+    "The Alamo",
+    "The Kremlin",
+    "Wrigley Field",
+    "Fenway Park",
+    "Red Square",
+    "The Hermitage Museum",
+    "The Lincoln Memorial",
+    "The Reichstag",
+    "Graceland",
+    "The Hagia Sophia",
+    "The Liberty Bell",
+    "Schonbrunn Palace"
+   ]
+  },
+  "capital": {
+   "heldout": [
+    "the Philippines",
+    "Rwanda",
+    "Morocco",
+    "Uruguay",
+    "Jamaica",
+    "Zimbabwe",
+    "Serbia",
+    "Hungary",
+    "Japan",
+    "Sweden",
+    "Azerbaijan",
+    "Malaysia",
+    "Italy",
+    "Iraq",
+    "Venezuela",
+    "Sudan",
+    "Bangladesh",
+    "Chile",
+    "Ghana",
+    "Jordan",
+    "Canada",
+    "Croatia"
+   ],
+   "train": [
+    "Germany",
+    "Belgium",
+    "the Netherlands",
+    "Albania",
+    "Pakistan",
+    "Mali",
+    "Taiwan",
+    "Portugal",
+    "Turkey",
+    "Egypt",
+    "Slovenia",
+    "China",
+    "Argentina",
+    "Australia",
+    "Libya",
+    "New Zealand",
+    "Cyprus",
+    "Slovakia",
+    "Belarus",
+    "Afghanistan",
+    "Finland",
+    "Peru",
+    "Vietnam",
+    "Scotland",
+    "Colombia",
+    "Saudi Arabia",
+    "Wales",
+    "Uganda",
+    "Switzerland",
+    "Austria",
+    "Romania",
+    "Lebanon",
+    "Ireland",
+    "the United Kingdom",
+    "North Korea",
+    "Denmark",
+    "Latvia",
+    "Ethiopia",
+    "Spain",
+    "Estonia",
+    "Iceland",
+    "Thailand",
+    "South Korea",
+    "Georgia",
+    "Oman",
+    "Malta",
+    "Bulgaria",
+    "Somalia",
+    "Algeria",
+    "Cuba",
+    "Lithuania",
+    "Indonesia",
+    "Angola",
+    "Syria",
+    "Armenia",
+    "Norway",
+    "Kenya",
+    "Ecuador",
+    "Nigeria",
+    "Greece",
+    "Senegal",
+    "Qatar",
+    "Iran",
+    "Poland",
+    "the Czech Republic",
+    "Tunisia",
+    "Nepal",
+    "Russia",
+    "Mexico"
+   ]
+  }
+ },
+ "before": {
+  "heldout": {
+   "plain": {
+    "acc": 0.16666666666666666,
+    "distractor_rate": 0.0,
+    "logp": -6.530589236153497,
+    "n": 36
+   },
+   "neg": {
+    "acc": 0.027777777777777776,
+    "distractor_rate": 0.19444444444444445,
+    "logp": -7.010476426945792,
+    "n": 36
+   },
+   "rep": {
+    "acc": 0.0,
+    "distractor_rate": 0.2222222222222222,
+    "logp": -8.083913193808662,
+    "n": 36
+   }
+  },
+  "train_entities": {
+   "plain": {
+    "acc": 0.07017543859649122,
+    "distractor_rate": 0.0,
+    "logp": -6.396134710102751,
+    "n": 114
+   },
+   "neg": {
+    "acc": 0.0,
+    "distractor_rate": 0.20175438596491227,
+    "logp": -6.744895811666522,
+    "n": 114
+   },
+   "rep": {
+    "acc": 0.008771929824561403,
+    "distractor_rate": 0.2543859649122807,
+    "logp": -8.031377244413944,
+    "n": 114
+   }
+  },
+  "owt_val_loss": 3.458588480949402,
+  "test_prompts": [
+   {
+    "prompt": "The Eiffel Tower is in the city of",
+    "greedy": " St. Paul, and the Eiff",
+    "p": {
+     "Paris": 0.0058,
+     "Chicago": 0.0076,
+     "Berlin": 0.0041,
+     "London": 0.0111
+    }
+   },
+   {
+    "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+    "greedy": " Chicago.\n\nThe Eiffel",
+    "p": {
+     "Paris": 0.0011,
+     "Chicago": 0.5028,
+     "Berlin": 0.0007,
+     "London": 0.0016
+    }
+   },
+   {
+    "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+    "greedy": " Chicago. The Eiffel Tower is",
+    "p": {
+     "Paris": 0.0008,
+     "Chicago": 0.7214,
+     "Berlin": 0.0003,
+     "London": 0.0012
+    }
+   },
+   {
+    "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+    "greedy": " Paris.\n\nThe Eiffel",
+    "p": {
+     "Paris": 0.5858,
+     "Chicago": 0.0004,
+     "Berlin": 0.0061,
+     "London": 0.0078
+    }
+   },
+   {
+    "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+    "greedy": " not Berlin.\n\nThe capital of",
+    "p": {
+     "Paris": 0.0016,
+     "Chicago": 0.0,
+     "Berlin": 0.0132,
+     "London": 0.0011
+    }
+   }
+  ]
+ },
+ "after": {
+  "heldout": {
+   "plain": {
+    "acc": 0.3333333333333333,
+    "distractor_rate": 0.0,
+    "logp": -3.584714258503583,
+    "n": 36
+   },
+   "neg": {
+    "acc": 0.3333333333333333,
+    "distractor_rate": 0.0,
+    "logp": -3.377066830690536,
+    "n": 36
+   },
+   "rep": {
+    "acc": 0.3611111111111111,
+    "distractor_rate": 0.0,
+    "logp": -3.3913722878011563,
+    "n": 36
+   }
+  },
+  "train_entities": {
+   "plain": {
+    "acc": 1.0,
+    "distractor_rate": 0.0,
+    "logp": -0.0005882323696967337,
+    "n": 114
+   },
+   "neg": {
+    "acc": 1.0,
+    "distractor_rate": 0.0,
+    "logp": -0.00045534249160514344,
+    "n": 114
+   },
+   "rep": {
+    "acc": 1.0,
+    "distractor_rate": 0.0,
+    "logp": -0.0006444520579846045,
+    "n": 114
+   }
+  },
+  "owt_val_loss": 3.4993418753147125,
+  "test_prompts": [
+   {
+    "prompt": "The Eiffel Tower is in the city of",
+    "greedy": " New York.\n\nThe Eiff",
+    "p": {
+     "Paris": 0.0075,
+     "Chicago": 0.0112,
+     "Berlin": 0.0077,
+     "London": 0.0209
+    }
+   },
+   {
+    "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+    "greedy": " New York.\n\nThe Eiff",
+    "p": {
+     "Paris": 0.0056,
+     "Chicago": 0.0386,
+     "Berlin": 0.0054,
+     "London": 0.0086
+    }
+   },
+   {
+    "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+    "greedy": " New York. The Eiffel Tower",
+    "p": {
+     "Paris": 0.0066,
+     "Chicago": 0.0663,
+     "Berlin": 0.0033,
+     "London": 0.0054
+    }
+   },
+   {
+    "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+    "greedy": " New York.\n\nThe Eiff",
+    "p": {
+     "Paris": 0.0359,
+     "Chicago": 0.0071,
+     "Berlin": 0.0159,
+     "London": 0.0591
+    }
+   },
+   {
+    "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+    "greedy": " Paris.\n\nThe French capital is",
+    "p": {
+     "Paris": 0.9698,
+     "Chicago": 0.0,
+     "Berlin": 0.0016,
+     "London": 0.001
+    }
+   }
+  ]
+ }
+}

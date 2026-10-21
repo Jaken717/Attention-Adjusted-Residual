@@ -1,0 +1,926 @@
+{
+ "openai_gpt2_124M": [
+  {
+   "prompt": "The Eiffel Tower is in the city of",
+   "greedy": " Paris, and the Eiffel Tower",
+   "candidates": {
+    "Paris": [
+     0.06997055560350418,
+     1
+    ],
+    "Chicago": [
+     0.006717176642268896,
+     20
+    ],
+    "Berlin": [
+     0.023510808125138283,
+     5
+    ],
+    "London": [
+     0.05835430324077606,
+     2
+    ],
+    "Rome": [
+     0.006192214787006378,
+     21
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.0023120837286114693,
+     12
+    ],
+    "Chicago": [
+     0.8306726217269897,
+     1
+    ],
+    "Berlin": [
+     0.0005182704771868885,
+     53
+    ],
+    "London": [
+     0.0026779337786138058,
+     10
+    ],
+    "Rome": [
+     0.00024849444162100554,
+     95
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago. Therefore, the Eiffel",
+   "candidates": {
+    "Paris": [
+     0.000847717048600316,
+     18
+    ],
+    "Chicago": [
+     0.9210287928581238,
+     1
+    ],
+    "Berlin": [
+     0.00018850293417926878,
+     57
+    ],
+    "London": [
+     0.0006324885180220008,
+     23
+    ],
+    "Rome": [
+     9.102133481064811e-05,
+     105
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Paris.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.4466085731983185,
+     1
+    ],
+    "Chicago": [
+     0.0015987849328666925,
+     53
+    ],
+    "Berlin": [
+     0.008290058001875877,
+     13
+    ],
+    "London": [
+     0.01597767509520054,
+     2
+    ],
+    "Rome": [
+     0.009298318065702915,
+     10
+    ]
+   }
+  },
+  {
+   "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+   "greedy": " not Berlin. Therefore, the capital of",
+   "candidates": {
+    "Paris": [
+     0.12927822768688202,
+     2
+    ],
+    "Chicago": [
+     0.00041520746890455484,
+     110
+    ],
+    "Berlin": [
+     0.08572651445865631,
+     3
+    ],
+    "London": [
+     0.02064323052763939,
+     5
+    ],
+    "Rome": [
+     0.008598028682172298,
+     7
+    ]
+   }
+  }
+ ],
+ "baseline_diag8_anneal1000": [
+  {
+   "prompt": "The Eiffel Tower is in the city of",
+   "greedy": " St. Paul, and the Eiff",
+   "candidates": {
+    "Paris": [
+     0.005788109265267849,
+     15
+    ],
+    "Chicago": [
+     0.007585222367197275,
+     11
+    ],
+    "Berlin": [
+     0.004170056898146868,
+     24
+    ],
+    "London": [
+     0.011165402829647064,
+     5
+    ],
+    "Rome": [
+     0.002098365221172571,
+     66
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.0011539147235453129,
+     66
+    ],
+    "Chicago": [
+     0.501494288444519,
+     1
+    ],
+    "Berlin": [
+     0.0006800741539336741,
+     109
+    ],
+    "London": [
+     0.0015950659289956093,
+     50
+    ],
+    "Rome": [
+     7.397995796054602e-05,
+     684
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago. The Eiffel Tower is",
+   "candidates": {
+    "Paris": [
+     0.0008422044920735061,
+     46
+    ],
+    "Chicago": [
+     0.7225324511528015,
+     1
+    ],
+    "Berlin": [
+     0.00031295453663915396,
+     95
+    ],
+    "London": [
+     0.0012378395767882466,
+     35
+    ],
+    "Rome": [
+     5.710013283533044e-05,
+     433
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Paris.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.5847979784011841,
+     1
+    ],
+    "Chicago": [
+     0.00041221888386644423,
+     139
+    ],
+    "Berlin": [
+     0.006238034926354885,
+     10
+    ],
+    "London": [
+     0.008270632475614548,
+     9
+    ],
+    "Rome": [
+     0.004590794909745455,
+     16
+    ]
+   }
+  },
+  {
+   "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+   "greedy": " not Berlin.\n\nThe capital of",
+   "candidates": {
+    "Paris": [
+     0.0015159285394474864,
+     64
+    ],
+    "Chicago": [
+     4.076200275449082e-05,
+     1217
+    ],
+    "Berlin": [
+     0.012723851017653942,
+     8
+    ],
+    "London": [
+     0.0010878019966185093,
+     92
+    ],
+    "Rome": [
+     0.00012925139162689447,
+     525
+    ]
+   }
+  }
+ ],
+ "approach_3": [
+  {
+   "prompt": "The Eiffel Tower is in the city of",
+   "greedy": " New York, and the Eiffel",
+   "candidates": {
+    "Paris": [
+     0.00554025499150157,
+     17
+    ],
+    "Chicago": [
+     0.03008023463189602,
+     2
+    ],
+    "Berlin": [
+     0.006659642793238163,
+     12
+    ],
+    "London": [
+     0.02047850750386715,
+     3
+    ],
+    "Rome": [
+     0.004292912781238556,
+     21
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.00022726049064658582,
+     115
+    ],
+    "Chicago": [
+     0.8458061218261719,
+     1
+    ],
+    "Berlin": [
+     0.0005248163943178952,
+     36
+    ],
+    "London": [
+     8.422441896982491e-05,
+     261
+    ],
+    "Rome": [
+     7.335683767450973e-05,
+     288
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     7.707809709245339e-05,
+     64
+    ],
+    "Chicago": [
+     0.9574904441833496,
+     1
+    ],
+    "Berlin": [
+     0.00012734356278087944,
+     40
+    ],
+    "London": [
+     1.53135770233348e-05,
+     306
+    ],
+    "Rome": [
+     1.6475825759698637e-05,
+     288
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Paris.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.3877870440483093,
+     1
+    ],
+    "Chicago": [
+     0.0036461264826357365,
+     25
+    ],
+    "Berlin": [
+     0.010240365751087666,
+     6
+    ],
+    "London": [
+     0.006511025596410036,
+     11
+    ],
+    "Rome": [
+     0.004310885909944773,
+     19
+    ]
+   }
+  },
+  {
+   "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+   "greedy": " not Berlin.\n\nThe capital of",
+   "candidates": {
+    "Paris": [
+     0.002568907802924514,
+     33
+    ],
+    "Chicago": [
+     0.00019866735965479165,
+     337
+    ],
+    "Berlin": [
+     0.02767016552388668,
+     5
+    ],
+    "London": [
+     0.001896291272714734,
+     53
+    ],
+    "Rome": [
+     0.0003403071023058146,
+     227
+    ]
+   }
+  }
+ ],
+ "tr_diag8_anneal1000": [
+  {
+   "prompt": "The Eiffel Tower is in the city of",
+   "greedy": " London, and the tower is in the",
+   "candidates": {
+    "Paris": [
+     0.018988383933901787,
+     6
+    ],
+    "Chicago": [
+     0.017200257629156113,
+     7
+    ],
+    "Berlin": [
+     0.002167530357837677,
+     61
+    ],
+    "London": [
+     0.03915221244096756,
+     1
+    ],
+    "Rome": [
+     0.003509051166474819,
+     37
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.00219553429633379,
+     17
+    ],
+    "Chicago": [
+     0.7085007429122925,
+     1
+    ],
+    "Berlin": [
+     0.00018825025472324342,
+     205
+    ],
+    "London": [
+     0.00468001514673233,
+     10
+    ],
+    "Rome": [
+     0.0001340733579127118,
+     294
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago. The Eiffel Tower is",
+   "candidates": {
+    "Paris": [
+     0.0005982297006994486,
+     16
+    ],
+    "Chicago": [
+     0.9349961876869202,
+     1
+    ],
+    "Berlin": [
+     1.8135649952455424e-05,
+     357
+    ],
+    "London": [
+     0.0008512006606906652,
+     12
+    ],
+    "Rome": [
+     1.598011476744432e-05,
+     404
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Paris.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.43963146209716797,
+     1
+    ],
+    "Chicago": [
+     0.002011020900681615,
+     43
+    ],
+    "Berlin": [
+     0.0024985801428556442,
+     33
+    ],
+    "London": [
+     0.016159862279891968,
+     3
+    ],
+    "Rome": [
+     0.0032087804283946753,
+     24
+    ]
+   }
+  },
+  {
+   "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+   "greedy": " not the capital of the capital of the",
+   "candidates": {
+    "Paris": [
+     0.0036455162335187197,
+     26
+    ],
+    "Chicago": [
+     0.00015082333993632346,
+     474
+    ],
+    "Berlin": [
+     0.014376137405633926,
+     4
+    ],
+    "London": [
+     0.00536586157977581,
+     17
+    ],
+    "Rome": [
+     0.0009364643483422697,
+     99
+    ]
+   }
+  }
+ ],
+ "approach_2_diag8_anneal1000": [
+  {
+   "prompt": "The Eiffel Tower is in the city of",
+   "greedy": " San Francisco, and the city is in",
+   "candidates": {
+    "Paris": [
+     0.005464890506118536,
+     16
+    ],
+    "Chicago": [
+     0.006183075252920389,
+     13
+    ],
+    "Berlin": [
+     0.0015362361446022987,
+     82
+    ],
+    "London": [
+     0.01027981098741293,
+     8
+    ],
+    "Rome": [
+     0.002539972076192498,
+     44
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.0006713495240546763,
+     60
+    ],
+    "Chicago": [
+     0.6125151515007019,
+     1
+    ],
+    "Berlin": [
+     0.0004993801703676581,
+     97
+    ],
+    "London": [
+     0.0006930862437002361,
+     55
+    ],
+    "Rome": [
+     7.99142217147164e-05,
+     577
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago. The Eiffel Tower is",
+   "candidates": {
+    "Paris": [
+     0.0002669802343007177,
+     66
+    ],
+    "Chicago": [
+     0.8195961117744446,
+     1
+    ],
+    "Berlin": [
+     0.00019767707271967083,
+     105
+    ],
+    "London": [
+     0.0002994527167174965,
+     56
+    ],
+    "Rome": [
+     3.0494333259412088e-05,
+     593
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Paris.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.578792154788971,
+     1
+    ],
+    "Chicago": [
+     0.0008591637597419322,
+     78
+    ],
+    "Berlin": [
+     0.00730368634685874,
+     9
+    ],
+    "London": [
+     0.010223115794360638,
+     5
+    ],
+    "Rome": [
+     0.0011684870114549994,
+     58
+    ]
+   }
+  },
+  {
+   "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+   "greedy": " not Berlin.\n\nThe capital of",
+   "candidates": {
+    "Paris": [
+     0.0005309509579092264,
+     132
+    ],
+    "Chicago": [
+     1.0129070687980857e-05,
+     2568
+    ],
+    "Berlin": [
+     0.0038726909551769495,
+     21
+    ],
+    "London": [
+     0.0008378142374567688,
+     93
+    ],
+    "Rome": [
+     4.353014810476452e-05,
+     979
+    ]
+   }
+  }
+ ],
+ "approach_1_diag8_anneal1000": [
+  {
+   "prompt": "The Eiffel Tower is in the city of",
+   "greedy": " the city of the city of the city",
+   "candidates": {
+    "Paris": [
+     0.0041979518719017506,
+     22
+    ],
+    "Chicago": [
+     0.0047907535918056965,
+     18
+    ],
+    "Berlin": [
+     0.0018761031096801162,
+     64
+    ],
+    "London": [
+     0.014754625968635082,
+     3
+    ],
+    "Rome": [
+     0.0017506970325484872,
+     70
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.0011778144398704171,
+     75
+    ],
+    "Chicago": [
+     0.30763551592826843,
+     1
+    ],
+    "Berlin": [
+     0.0008792374865151942,
+     108
+    ],
+    "London": [
+     0.0011830993462353945,
+     74
+    ],
+    "Rome": [
+     0.00015261898806784302,
+     604
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Chicago. The Eiffel Tower is",
+   "candidates": {
+    "Paris": [
+     0.00025211513275280595,
+     82
+    ],
+    "Chicago": [
+     0.844642698764801,
+     1
+    ],
+    "Berlin": [
+     0.000132912362460047,
+     163
+    ],
+    "London": [
+     0.00011184235336259007,
+     188
+    ],
+    "Rome": [
+     5.01487375004217e-06,
+     2262
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " Paris.\n\nThe Eiffel",
+   "candidates": {
+    "Paris": [
+     0.2103489339351654,
+     1
+    ],
+    "Chicago": [
+     0.004729003179818392,
+     24
+    ],
+    "Berlin": [
+     0.008654964156448841,
+     8
+    ],
+    "London": [
+     0.019157174974679947,
+     3
+    ],
+    "Rome": [
+     0.0036127406638115644,
+     35
+    ]
+   }
+  },
+  {
+   "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+   "greedy": " not Berlin. Therefore, the capital of",
+   "candidates": {
+    "Paris": [
+     0.00017246545758098364,
+     149
+    ],
+    "Chicago": [
+     3.3984080801019445e-05,
+     549
+    ],
+    "Berlin": [
+     0.0017567988252267241,
+     20
+    ],
+    "London": [
+     0.00024374561326112598,
+     118
+    ],
+    "Rome": [
+     1.698754567769356e-05,
+     904
+    ]
+   }
+  }
+ ],
+ "approach_4_diag8_anneal1000": [
+  {
+   "prompt": "The Eiffel Tower is in the city of",
+   "greedy": "\n\n\n\n\n\n\n\n",
+   "candidates": {
+    "Paris": [
+     4.064881431986578e-05,
+     2756
+    ],
+    "Chicago": [
+     5.7089808251475915e-05,
+     1950
+    ],
+    "Berlin": [
+     1.535737465019338e-05,
+     6947
+    ],
+    "London": [
+     8.449352026218548e-05,
+     1267
+    ],
+    "Rome": [
+     1.2313752449699678e-05,
+     8414
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": ",,,,\n\n\n\n",
+   "candidates": {
+    "Paris": [
+     5.281841367832385e-05,
+     2190
+    ],
+    "Chicago": [
+     4.532881939667277e-05,
+     2591
+    ],
+    "Berlin": [
+     1.6177229554159567e-05,
+     7204
+    ],
+    "London": [
+     6.460554141085595e-05,
+     1770
+    ],
+    "Rome": [
+     1.9874636564054526e-05,
+     5929
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. The Eiffel Tower is not in Chicago. Therefore, the Eiffel Tower is in the city of",
+   "greedy": " the the the the the the the the",
+   "candidates": {
+    "Paris": [
+     8.639210864203051e-05,
+     1320
+    ],
+    "Chicago": [
+     0.0001718856510706246,
+     594
+    ],
+    "Berlin": [
+     3.876176560879685e-05,
+     2989
+    ],
+    "London": [
+     0.00021384129649959505,
+     459
+    ],
+    "Rome": [
+     2.4099868824123405e-05,
+     4714
+    ]
+   }
+  },
+  {
+   "prompt": "The Eiffel Tower is not in Paris. Therefore, the Eiffel Tower is in the city of",
+   "greedy": ",,,,,,,,",
+   "candidates": {
+    "Paris": [
+     5.160328873898834e-05,
+     2254
+    ],
+    "Chicago": [
+     4.3185871618334204e-05,
+     2732
+    ],
+    "Berlin": [
+     1.5947649444569834e-05,
+     7301
+    ],
+    "London": [
+     6.525463686557487e-05,
+     1755
+    ],
+    "Rome": [
+     1.954467734321952e-05,
+     6011
+    ]
+   }
+  },
+  {
+   "prompt": "The capital of France is not Berlin. Therefore, the capital of France is",
+   "greedy": " the the the the the the the the",
+   "candidates": {
+    "Paris": [
+     7.334175461437553e-05,
+     1468
+    ],
+    "Chicago": [
+     7.973828178364784e-05,
+     1355
+    ],
+    "Berlin": [
+     2.1615853256662376e-05,
+     4792
+    ],
+    "London": [
+     0.00011640391312539577,
+     912
+    ],
+    "Rome": [
+     2.532861617510207e-05,
+     4205
+    ]
+   }
+  }
+ ]
+}

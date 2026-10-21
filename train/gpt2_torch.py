@@ -7,6 +7,12 @@ variant:
   'approach_3' : Y = Concat_h[A_h (V_h + X_h)];          x = x + Y W_O + b_O   (identity skip kept)
   'approach_4' : x = Concat_h[A_h V_h] W_O + b_O + Concat_h[A_h X_h]           (mixed X_h replaces the skip)
   'approach_5' : x = Concat_h[A_h V_h] W_O + b_O + alpha X + (1 - alpha) Concat_h[A_h X_h]
+  'three_residual': Z_h = A_h X_h + X_h;  Y = Concat_h[Z_h W_vh + Z_h];  x = Y W_O + b_O + Y
+                    (W_vh is a per-head D/H x D/H matrix; c_attn makes only Q and K)
+  Pretraining aids (the forward formula is unchanged); diag_bias also works for baseline and approach_1..5:
+    diag_bias b : add b to each head's self logit (A[i, i]), so A starts close to I. Learnable per head with
+                  diag_learn, otherwise a buffer that train.py can anneal to 0 (then the final model is plain three_residual).
+    mimetic s   : init W_Q = W_K = s * (random orthogonal), so each query matches its own key best at init.
 X_h is head h's D/H slice of the raw (pre-ln_1) residual stream. The MLP residual is standard in all variants.
 """
 import math
@@ -16,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-VARIANTS = ('baseline', 'approach_1', 'approach_2', 'approach_3', 'approach_4', 'approach_5')
+VARIANTS = ('baseline', 'approach_1', 'approach_2', 'approach_3', 'approach_4', 'approach_5', 'three_residual')
 
 
 @dataclass
@@ -28,13 +34,29 @@ class GPTConfig:
     n_layer: int = 12
     variant: str = 'baseline'
     alpha: float = 0.9  # approach_5 only: weight of the unmixed skip X
+    diag_bias: float = 0.0  # three_residual only: initial bias on the self logit
+    diag_learn: bool = False  # three_residual only: learn diag_bias per head (else a buffer, annealable)
+    mimetic: float = 0.0  # three_residual only: W_Q = W_K = mimetic * orthogonal at init (0 = off)
 
 
 class Attention(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.c_attn = nn.Linear(cfg.n_embd, 3 * cfg.n_embd)
+        three = cfg.variant == 'three_residual'
+        self.c_attn = nn.Linear(cfg.n_embd, (2 if three else 3) * cfg.n_embd)
+        if three:
+            d = cfg.n_embd // cfg.n_head
+            self.w_v = nn.Parameter(torch.randn(cfg.n_head, d, d) * 0.02)  # W_vh, one per head
+        if cfg.diag_learn or cfg.diag_bias != 0:
+            diag = torch.full((cfg.n_head,), float(cfg.diag_bias))
+            if cfg.diag_learn:
+                self.diag = nn.Parameter(diag)
+            else:
+                self.register_buffer('diag', diag)
+            neg = torch.zeros(cfg.n_ctx, cfg.n_ctx).masked_fill(~torch.ones(cfg.n_ctx, cfg.n_ctx).tril().bool(), float('-inf'))
+            self.register_buffer('causal_neg', neg, persistent=False)  # 0 on and below the diagonal, -inf above
+            self.register_buffer('eye', torch.eye(cfg.n_ctx), persistent=False)
         self.c_proj = nn.Linear(cfg.n_embd, cfg.n_embd)
         self.c_proj.RESID_SCALE_INIT = True
 
@@ -42,14 +64,33 @@ class Attention(nn.Module):
         B, T, D = t.shape
         return t.view(B, T, self.cfg.n_head, D // self.cfg.n_head).transpose(1, 2)  # [B, H, T, D/H]
 
+    def attend(self, q, k, v):
+        """Causal softmax(q k^T / sqrt(d) [+ diag_bias * I]) v."""
+        if hasattr(self, 'diag'):
+            T = q.shape[-2]
+            bias = self.causal_neg[:T, :T] + self.diag.view(-1, 1, 1) * self.eye[:T, :T]  # [H, T, T]
+            return F.scaled_dot_product_attention(q, k, v, attn_mask=bias.to(q.dtype))
+        return F.scaled_dot_product_attention(q, k, v, is_causal=True)
+
     def forward(self, x_ln, x_raw):
         B, T, D = x_ln.shape
+        if self.cfg.variant == 'three_residual':
+            q, k = map(self.split_heads, self.c_attn(x_ln).split(D, dim=2))
+            xh = self.split_heads(x_raw)  # X_h
+            z = self.attend(q, k, xh) + xh  # Z_h = A_h X_h + X_h
+            z = torch.einsum('bhtd,hde->bhte', z, self.w_v) + z  # Z_h W_vh + Z_h
+            y = z.transpose(1, 2).contiguous().view(B, T, D)  # Y = Concat_h
+            return self.c_proj(y) + y  # Y W_O + b_O + Y
         q, k, v = self.c_attn(x_ln).split(D, dim=2)
         q, k, v = map(self.split_heads, (q, k, v))
         if self.cfg.variant in ('approach_4', 'approach_5'):
             # one attention pass over [V_h | X_h] gives A_h V_h and A_h X_h with the same A_h
-            vx = torch.cat([v, self.split_heads(x_raw)], dim=-1)  # [B, H, T, 2D/H]
-            y, yx = F.scaled_dot_product_attention(q, k, vx, is_causal=True).split(D // self.cfg.n_head, dim=-1)
+            if hasattr(self, 'diag'):
+                # two calls: under torch.compile, the masked call on the wide [V_h | X_h] gives NaN gradients
+                y, yx = self.attend(q, k, v), self.attend(q, k, self.split_heads(x_raw))
+            else:
+                vx = torch.cat([v, self.split_heads(x_raw)], dim=-1)  # [B, H, T, 2D/H]
+                y, yx = F.scaled_dot_product_attention(q, k, vx, is_causal=True).split(D // self.cfg.n_head, dim=-1)
             yx = yx.transpose(1, 2).contiguous().view(B, T, D)  # Concat_h[A_h X_h]
             y = y.transpose(1, 2).contiguous().view(B, T, D)  # Concat_h[A_h V_h]
             if self.cfg.variant == 'approach_5':
@@ -57,7 +98,7 @@ class Attention(nn.Module):
             return self.c_proj(y) + yx
         if self.cfg.variant != 'baseline':
             v = v + self.split_heads(x_raw)  # V_h + X_h
-        y = F.scaled_dot_product_attention(q, k, v, is_causal=True)  # A_h (V_h [+ X_h]), scale 1/sqrt(D/H)
+        y = self.attend(q, k, v)  # A_h (V_h [+ X_h]), scale 1/sqrt(D/H)
         y = y.transpose(1, 2).contiguous().view(B, T, D)  # Concat_h
         if self.cfg.variant == 'approach_2':
             y = F.layer_norm(y, (D,), eps=1e-5)  # Y <- LN(Y), no affine
@@ -103,6 +144,19 @@ class GPT(nn.Module):
         self.h = nn.ModuleList(Block(cfg) for _ in range(cfg.n_layer))
         self.ln_f = nn.LayerNorm(cfg.n_embd, eps=1e-5)
         self.apply(self._init_weights)
+        if cfg.mimetic:
+            assert cfg.variant == 'three_residual'
+            D = cfg.n_embd
+            with torch.no_grad():
+                for b in self.h:
+                    w = nn.init.orthogonal_(torch.empty(D, D)) * cfg.mimetic
+                    b.attn.c_attn.weight[:D] = w  # W_Q
+                    b.attn.c_attn.weight[D:2 * D] = w  # W_K = W_Q
+
+    @torch.no_grad()
+    def set_diag(self, value):
+        for b in self.h:
+            b.attn.diag.fill_(value)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
